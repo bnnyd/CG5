@@ -61,6 +61,17 @@ float3 shadeMiss(Ray ray)
 // Edits the given ray accordingly
 float3 trace(inout Ray ray)
 {
+	RayHit rayHit = CreateRayHit();
+	rayHit = intersectScene(ray);
+	if (!isinf(rayHit.distance))
+	{
+		return ray.energy * shadeHit(ray, rayHit);
+	}
+	else
+	{
+		ray.energy = 0;
+		return shadeMiss(ray);
+	}
     // Your implementation
     return 0;
 }
