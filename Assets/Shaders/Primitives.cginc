@@ -1,8 +1,11 @@
 void updateRayHit(inout RayHit bestHit, float3 pos, float t, float3 normal, Material material){
-    bestHit.position = pos;
-    bestHit.distance = t;
-    bestHit.normal = normal;
-    bestHit.material = material;
+    // update if the current intersection is at a valid distance and its distance is minimal 
+    if ((t > 0) && (t < bestHit.distance)){
+        bestHit.position = pos;
+        bestHit.distance = t;
+        bestHit.normal = normal;
+        bestHit.material = material;
+        }
 }
 
 // Checks for an intersection between a ray and a sphere
@@ -39,22 +42,31 @@ void intersectSphere(Ray ray, inout RayHit bestHit, Material material, float4 sp
             t = (- b + sqrt(delta))/(2*a);
         }
 
-        if ((t > 0) && (t < bestHit.distance)){
-            // if the current intersection is at a valid distance and its distance is minimal
-            bestHit.position = orig + dir*t;
-            bestHit.distance = t;
-            bestHit.normal = normalize(bestHit.position - center);
-            bestHit.material = material;
-        }
+        float3 position = orig + dir*t;
+        float3 normal = normalize(bestHit.position - center);
+        updateRayHit(bestHit, position, t, normal, material);
         return;      
     }
 }
 
 // Checks for an intersection between a ray and a plane
-// The plane passes through point c and has a surface normal n
+// The plane passes through point c and has a surface normal n 
 void intersectPlane(Ray ray, inout RayHit bestHit, Material material, float3 c, float3 n)
 {
-    // Your implementation
+    float3 dir = ray.direction;
+    float3 orig = ray.origin;
+
+    float cos_theta = dot(dir, n);
+    if(cos_theta == 0){
+        // the plane lays on the same direction of the ray, the plane is not visible 
+        return;
+    }
+    float t = -dot(orig - c, n)/cos_theta;
+    float3 position = orig + dir*t;
+
+    updateRayHit(bestHit, position, t, n, material);
+    return;
+        
 }
 
 // Checks for an intersection between a ray and a plane

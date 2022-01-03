@@ -72,7 +72,6 @@ float3 trace(inout Ray ray)
 		ray.energy = 0;
 		return shadeMiss(ray);
 	}
-    // Your implementation
     return 0;
 }
 
