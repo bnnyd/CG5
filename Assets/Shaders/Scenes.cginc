@@ -1,7 +1,12 @@
-// Defines an empty scene
+// Defines an empty scene 
 RayHit intersectScene0(Ray ray)
 {
+    Material diffuse = CreateMaterial(0.7, 0);
+    Material diffuseRed = CreateMaterial(float3(0.8, 0.2, 0.2), 0);
+
     RayHit bestHit = CreateRayHit();
+    intersectSphere(ray, bestHit, diffuse, float4(1, 2, -1, 1));
+    intersectSphere(ray, bestHit, diffuseRed, float4(0, 1, 0, 1));
     return bestHit;
 }
 

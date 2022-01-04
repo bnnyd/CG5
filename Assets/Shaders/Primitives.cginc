@@ -1,6 +1,6 @@
 void updateRayHit(inout RayHit bestHit, float3 pos, float t, float3 normal, Material material){
     // update if the current intersection is at a valid distance and its distance is minimal 
-    if ((t > 0) && (t < bestHit.distance)){
+    if ((t > 0) && ((t < bestHit.distance) || (isinf(bestHit.distance)))){
         bestHit.position = pos;
         bestHit.distance = t;
         bestHit.normal = normal;
@@ -35,15 +35,18 @@ void intersectSphere(Ray ray, inout RayHit bestHit, Material material, float4 sp
 
     } else {
 
-        float t = (- b - sqrt(delta))/(2*a);
-
-        // update the solution t if the smaller solution is negative
-        if ((delta > 0) && (t <= 0)){
-            t = (- b + sqrt(delta))/(2*a);
+        float t;
+        if(delta == 0) {
+            t = -b/(2*a);
+        } else{
+            t = min((- b - sqrt(delta))/(2*a), (- b + sqrt(delta))/(2*a));
+            if (t <= 0){ // update the solution t if the smaller solution is negative  
+                t = max((- b - sqrt(delta))/(2*a), (- b + sqrt(delta))/(2*a));
+            }
         }
-
+        
         float3 position = orig + dir*t;
-        float3 normal = normalize(bestHit.position - center);
+        float3 normal = normalize(position - center);
         updateRayHit(bestHit, position, t, normal, material);
         return;      
     }
@@ -58,10 +61,12 @@ void intersectPlane(Ray ray, inout RayHit bestHit, Material material, float3 c, 
 
     float cos_theta = dot(dir, n);
     if(cos_theta == 0){
-        // the plane lays on the same direction of the ray, the plane is not visible 
+        // the plane lays on the same direction of the ray, the plane is not visible
+ 
         return;
     }
     float t = -dot(orig - c, n)/cos_theta;
+   
     float3 position = orig + dir*t;
 
     updateRayHit(bestHit, position, t, n, material);

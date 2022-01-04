@@ -13,6 +13,7 @@ int _SceneIndex; // Index of the scene to display
 // Constants
 static const float PI = 3.14159265f;
 static const float EPS = 0.0001f;
+static const float SHININESS = 50.0f;
 
 // Imports
 #include "UnityCG.cginc" // Unity shader library
@@ -23,7 +24,7 @@ static const float EPS = 0.0001f;
 
 
 // Casts a given ray into the currently selected scene
-// Returns a the closest collision to the ray origin, i.e. the "Best Hit"
+// Returns a the closest collision to the ray origin, i.e. the "Best Hit" 
 RayHit intersectScene(Ray ray)
 {
     switch(_SceneIndex)
@@ -46,14 +47,31 @@ RayHit intersectScene(Ray ray)
 // Returns the color associated with the given ray and hit point 
 float3 shadeHit(Ray ray, RayHit hit)
 {
-    return blinnPhong(hit.normal, -normalize(ray.direction), normalize(_DirectionalLight.xyz), SHININESS, hit.material.albedo);
+    float3 normal = hit.normal;
+    float3 viewDirection = -normalize(ray.direction);
+    float3 lightDirection = -normalize(_DirectionalLight.xyz);
+    float3 albedo = hit.material.albedo;
+    float3 color = blinnPhong(normal, viewDirection, lightDirection, SHININESS, albedo);
+
+    //shadow:
+    float visibility; // if visibility == 0 the point is in shade 
+    Ray shadowRay = CreateRay(hit.position + normal * EPS, lightDirection, 1);
+    RayHit shadowRayHit = intersectScene(shadowRay);
+
+    if (isinf(shadowRayHit.distance)){
+        visibility = 1;
+    } else {
+        visibility = 0; 
+    }
+
+    return visibility * color;
 }
 
 // Returns the color associated with the given ray that has missed all geometry
 float3 shadeMiss(Ray ray)
 {
-    // Your implementation
-    return 0;
+    float3 skyColor = sampleSkybox(ray.direction);
+    return skyColor;
 }
 
 // Traces the given ray in the currently selected scene
@@ -69,8 +87,9 @@ float3 trace(inout Ray ray)
 	}
 	else
 	{
-		ray.energy = 0;
-		return shadeMiss(ray);
+        float3 orig_energy = ray.energy;
+        ray.energy = 0;
+		return orig_energy * shadeMiss(ray);
 	}
     return 0;
 }
