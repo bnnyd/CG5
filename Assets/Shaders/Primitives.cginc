@@ -8,6 +8,21 @@ void updateRayHit(inout RayHit bestHit, float3 pos, float t, float3 normal, Mate
         }
 }
 
+float4 planeRayIntersection(float3 orig, float3 dir, float3 planePoint, float3 planeNormal){
+    
+    float cos_theta = dot(dir, planeNormal);
+
+    if(cos_theta == 0){
+        // the plane lays on the same direction of the ray, the plane is not visible   
+        return -1;
+    }
+
+    float t = -dot(orig - planePoint, planeNormal)/cos_theta;
+   
+    float3 position = orig + dir*t;
+    return float4(position, t);
+}
+
 // Checks for an intersection between a ray and a sphere
 // The sphere center is given by sphere.xyz and its radius is sphere.w
 void intersectSphere(Ray ray, inout RayHit bestHit, Material material, float4 sphere)
@@ -59,16 +74,9 @@ void intersectPlane(Ray ray, inout RayHit bestHit, Material material, float3 c, 
     float3 dir = ray.direction;
     float3 orig = ray.origin;
 
-    float cos_theta = dot(dir, n);
-    if(cos_theta == 0){
-        // the plane lays on the same direction of the ray, the plane is not visible
- 
-        return;
-    }
-    float t = -dot(orig - c, n)/cos_theta;
-   
-    float3 position = orig + dir*t;
-
+    float4 intersection = planeRayIntersection(orig, dir, c, n);
+    float3 position = intersection.xyz;    
+    float t = intersection.w;
     updateRayHit(bestHit, position, t, n, material);
     return;
         
@@ -87,7 +95,30 @@ void intersectPlaneCheckered(Ray ray, inout RayHit bestHit, Material m1, Materia
 // The triangle is defined by points a, b, c
 void intersectTriangle(Ray ray, inout RayHit bestHit, Material material, float3 a, float3 b, float3 c)
 {
-    // Your implementation
+    // find point p: meeting of the trinagle plane and the ray:  
+    float3 dir = ray.direction; 
+    float3 orig = ray.origin;
+    float3 planePoint = a;
+    float3 planeNormal = normalize(cross(a - c, b - c));
+
+    float4 intersection = planeRayIntersection(orig, dir, planePoint, planeNormal);
+    float3 p = intersection.xyz;    
+    float t = intersection.w;
+    if(t < 0){
+        // the ray doen't meet the plane in any valid point
+        return;
+    }
+    // p is inside the triangle if all the the following products are non-negative:
+    float prod1 = dot(cross(b-a,p-a),planeNormal);
+    float prod2 = dot(cross(c-b,p-b),planeNormal);
+    float prod3 = dot(cross(a-c,p-c),planeNormal);
+
+    if((prod1 < 0) || (prod2 < 0) || (prod3 < 0)){
+        return;
+    }
+
+    updateRayHit(bestHit, p, t, planeNormal, material);
+    return;
 }
 
 
