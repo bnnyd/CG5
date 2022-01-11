@@ -9,8 +9,8 @@ float3 blinnPhong(float3 n, float3 v, float3 l, float shininess, float3 albedo)
 	return diffuse + specular;
 }
 
-// Reflects the given ray from the given hit point
-void reflectRay(inout Ray ray, RayHit hit)
+// Reflects the given ray from the given hit point   
+void reflectRay(inout Ray ray, RayHit hit) 
 {
     float epsilon = 0.0001f;
     
@@ -27,7 +27,39 @@ void reflectRay(inout Ray ray, RayHit hit)
 // Refracts the given ray from the given hit point
 void refractRay(inout Ray ray, RayHit hit)
 {
-    // Your implementation
+    float epsilon = 0.0001f;
+    //float cos_incidentAngle = dot(-ray.direction, hit.normal);
+    //float sin_theta = sin(acos(incidentAngle));
+    //float cos_theta = cos_incidentAngle;
+    
+    float cosTheta = dot(-ray.direction, hit.normal);
+
+    float3 incNormal;
+    float etaRatio;
+
+    if (cosTheta < 0){
+    // the incident angle is bigger more than 90 deg => the ray comes from inside the object: in-->out   
+
+        etaRatio = hit.material.refractiveIndex;
+        incNormal = -hit.normal;
+        // recalculate the sinus with the inner normal:
+        cosTheta = -cosTheta;     
+
+    } else {
+    // the incident angle is not bigger than 90 deg => the ray comes from outside the material: out-->in  
+
+        etaRatio = 1/hit.material.refractiveIndex;
+        incNormal = hit.normal;
+    }
+    float sinTheta = length(cross(-ray.direction, incNormal));
+
+    // formula from TA:     
+    float3 reftractedDirection = (ray.direction + incNormal * cosTheta) * etaRatio - incNormal * (sqrt(1 - pow(etaRatio * sinTheta,2)));
+    ray.direction = reftractedDirection;
+    // avoid acne: 
+    ray.origin = hit.position - epsilon * incNormal;
+    return;
+    
 }
 
 // Samples the _SkyboxTexture at a given direction vector

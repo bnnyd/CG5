@@ -84,7 +84,11 @@ float3 trace(inout Ray ray)
 	if (!isinf(rayHit.distance))
 	{
         float3 hitColor = ray.energy * shadeHit(ray, rayHit);
-        reflectRay(ray, rayHit);
+        if(rayHit.material.refractiveIndex == -1){
+            reflectRay(ray, rayHit);
+        } else {
+            refractRay(ray, rayHit);
+        }
         return hitColor;
 	}
 	else

@@ -23,6 +23,29 @@ float4 planeRayIntersection(float3 orig, float3 dir, float3 planePoint, float3 p
 	return float4(position, t);
 }
 
+float solveTQuadraticEquation(float a, float b, float c){
+	// check the discriminant delta and then solve the quadratic equation   
+	float delta = b * b - 4 * a*c;
+	float t;
+
+	if (delta < 0) {
+		// no intestections  
+		return -1;
+
+	}
+		
+	if (delta == 0) {
+		t = -b / (2 * a);
+	}
+	else {
+		t = min((-b - sqrt(delta)) / (2 * a), (-b + sqrt(delta)) / (2 * a));
+		if (t <= 0) { // update the solution t if the smaller solution is negative     
+			t = max((-b - sqrt(delta)) / (2 * a), (-b + sqrt(delta)) / (2 * a));
+		}
+	}
+	return t;
+}
+
 // Checks for an intersection between a ray and a sphere
 // The sphere center is given by sphere.xyz and its radius is sphere.w
 void intersectSphere(Ray ray, inout RayHit bestHit, Material material, float4 sphere)
@@ -40,33 +63,14 @@ void intersectSphere(Ray ray, inout RayHit bestHit, Material material, float4 sp
 	float b = 2 * dot(orig - center, dir);
 	float c = dot(orig - center, orig - center) - pow(radius, 2);
 
-	// check the discriminant delta and then solve the quadratic equation
-
-	float delta = b * b - 4 * a*c;
-
-	if (delta < 0) {
-		// no intestections
+	float t = solveTQuadraticEquation(a, b, c);
+	if (t < 0) {
 		return;
-
-	}
-	else {
-
-		float t;
-		if (delta == 0) {
-			t = -b / (2 * a);
-		}
-		else {
-			t = min((-b - sqrt(delta)) / (2 * a), (-b + sqrt(delta)) / (2 * a));
-			if (t <= 0) { // update the solution t if the smaller solution is negative  
-				t = max((-b - sqrt(delta)) / (2 * a), (-b + sqrt(delta)) / (2 * a));
-			}
-		}
-
-		float3 position = orig + dir * t;
-		float3 normal = normalize(position - center);
-		updateRayHit(bestHit, position, t, normal, material);
-		return;
-	}
+    }
+	float3 position = orig + dir * t;
+	float3 normal = normalize(position - center);
+	updateRayHit(bestHit, position, t, normal, material);
+	return;
 }
 
 // Checks for an intersection between a ray and a plane
@@ -84,18 +88,30 @@ void intersectPlane(Ray ray, inout RayHit bestHit, Material material, float3 c, 
 
 }
 
-Material calcCheckeredMaterial(Material m1, Material m2, float3 intersectionPoint)
+Material calcCheckeredMaterial(Material m1, Material m2, float3 intersectionPoint, float3 planeNormal)
 {
-	float x = intersectionPoint.x;
-	float z = intersectionPoint.z;
+	float u;
+	float v;
 
-	if ((fmod(abs(x), 1) < 0.5) != (fmod(abs(z), 1) < 0.5))
+	if (planeNormal.x != 0){
+		u = intersectionPoint.y;
+		v = intersectionPoint.z;	
+    } else if (planeNormal.y != 0){
+		u = intersectionPoint.x;
+		v = intersectionPoint.z;
+	} else {
+		u = intersectionPoint.x;
+		v = intersectionPoint.y;
+	}
+
+	// xor: if u and v disagree is True:  
+	if ( ((u - floor(u)) < 0.5) ^ ((v - floor(v)) < 0.5) )	
 	{
-		return m1;
+		return m2;
 	}
 	else
 	{
-		return m2;
+		return m1;
 	}
 }
 
@@ -113,7 +129,7 @@ void intersectPlaneCheckered(Ray ray, inout RayHit bestHit, Material m1, Materia
 	float3 p = intersection.xyz;
 	float t = intersection.w;
 	// Check with Binyamin if we check that ray hits plane on the normal side or the other
-	Material material = calcCheckeredMaterial(m1, m2, p);
+	Material material = calcCheckeredMaterial(m1, m2, p, planeNormal);
 	updateRayHit(bestHit, p, t, planeNormal, material);
 	return;
 }
@@ -154,7 +170,24 @@ void intersectTriangle(Ray ray, inout RayHit bestHit, Material material, float3 
 // The circle center is given by circle.xyz, its radius is circle.w and its orientation vector is n 
 void intersectCircle(Ray ray, inout RayHit bestHit, Material material, float4 circle, float3 n)
 {
-	// Your implementation
+	float3 dir = ray.direction;
+	float3 orig = ray.origin;
+	float3 planePoint = circle.xyz;
+	float3 planeNormal = n;
+
+	float4 intersection = planeRayIntersection(orig, dir, planePoint, planeNormal);
+	float3 p = intersection.xyz;
+	float t = intersection.w;
+	if (t < 0) {
+		// the ray doen't meet the plane in any valid point
+		return;
+	}
+	if (distance(p, circle.xyz) > circle.w) {
+		// the point is out of the circle
+		return;
+    }
+	updateRayHit(bestHit, p, t, planeNormal, material);
+	return;
 }
 
 
@@ -162,5 +195,41 @@ void intersectCircle(Ray ray, inout RayHit bestHit, Material material, float4 ci
 // The cylinder center is given by cylinder.xyz, its radius is cylinder.w and its height is h
 void intersectCylinderY(Ray ray, inout RayHit bestHit, Material material, float4 cylinder, float h)
 {
-	// Your implementation
+	float3 center = cylinder.xyz;
+	float radius = cylinder.w;
+	float height = h;
+	float3 dir = ray.direction;
+	float3 orig = ray.origin;
+
+	float a = dir.x*dir.x + dir.z*dir.z;
+	float b = 2 * ((orig.x - center.x)*dir.x + (orig.z - center.z)*dir.z);
+	float c = pow(orig.x - center.x, 2) + pow(orig.z - center.z, 2) - pow(radius, 2);
+
+	float t = solveTQuadraticEquation(a, b, c);
+	if (t < 0) {
+		return;
+    }
+
+	float3 position = orig + dir * t;
+
+	if(position.y - center.y > height/2){
+		float3 upCircleCenter = float3(center.x, center.y + height/2, center.z);
+		float3 upNormal = float3(0,1,0);
+		float4 upCircle = float4(upCircleCenter, radius);
+		intersectCircle(ray, bestHit, material, upCircle, upNormal);
+
+	} else if(center.y - position.y > height/2){
+		float3 downCircleCenter = float3(center.x, center.y - height/2, center.z);
+		float3 downNormal = float3(0,-1,0);
+		float4 downCircle = float4(downCircleCenter, radius);
+		intersectCircle(ray, bestHit, material, downCircle, downNormal);
+
+	} else {
+		float3 normal_temp = normalize(position - center);
+		// project normal_temp on XZ plane:
+		float3 normal = normalize(float3(normal_temp.x, 0, normal_temp.z));
+		updateRayHit(bestHit, position, t, normal, material);
+	}
+	
+	return;
 }
