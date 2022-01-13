@@ -28,9 +28,6 @@ void reflectRay(inout Ray ray, RayHit hit)
 void refractRay(inout Ray ray, RayHit hit)
 {
     float epsilon = 0.0001f;
-    //float cos_incidentAngle = dot(-ray.direction, hit.normal);
-    //float sin_theta = sin(acos(incidentAngle));
-    //float cos_theta = cos_incidentAngle;
     
     float cosTheta = dot(-ray.direction, hit.normal);
 

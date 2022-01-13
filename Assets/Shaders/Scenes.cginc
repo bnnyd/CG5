@@ -1,12 +1,11 @@
 // Defines an empty scene 
 RayHit intersectScene0(Ray ray)
 {
-    Material diffuse = CreateMaterial(0.7, 0);
-    Material diffuseRed = CreateMaterial(float3(0.8, 0.2, 0.2), 0);
+    Material black = CreateMaterial(0.9, 0.2);
+    Material white = CreateMaterial(0.2, 0.2);
 
     RayHit bestHit = CreateRayHit();
-    intersectSphere(ray, bestHit, diffuse, float4(1, 2, -1, 1));
-    intersectSphere(ray, bestHit, diffuseRed, float4(0, 1, 0, 1));
+    intersectPlaneCheckered(ray, bestHit, black, white, float3(0, 0, 0), float3(1, 0, 0));
     return bestHit;
 }
 

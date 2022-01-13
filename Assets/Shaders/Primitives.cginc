@@ -117,7 +117,7 @@ Material calcCheckeredMaterial(Material m1, Material m2, float3 intersectionPoin
 
 // Checks for an intersection between a ray and a plane
 // The plane passes through point c and has a surface normal n
-// The material returned is either m1 or m2 in a way that creates a checkerboard pattern 
+// The material returned is either m1 or m2 in a way that creates a checkerboard pattern  
 void intersectPlaneCheckered(Ray ray, inout RayHit bestHit, Material m1, Material m2, float3 c, float3 n)
 {
 	float3 dir = ray.direction;
@@ -128,7 +128,7 @@ void intersectPlaneCheckered(Ray ray, inout RayHit bestHit, Material m1, Materia
 	float4 intersection = planeRayIntersection(orig, dir, planePoint, planeNormal);
 	float3 p = intersection.xyz;
 	float t = intersection.w;
-	// Check with Binyamin if we check that ray hits plane on the normal side or the other
+	// Check with Binyamin if we check that ray hits plane on the normal side or the other  
 	Material material = calcCheckeredMaterial(m1, m2, p, planeNormal);
 	updateRayHit(bestHit, p, t, planeNormal, material);
 	return;
